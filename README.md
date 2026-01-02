@@ -1,2 +1,2 @@
 # LLM_LATENCY_TEST
-fatapi based lightweight latency comparison backend between huggingface models gemma-2-9b-it, Meta-Llama-3-8B-Instruct, Qwen2.5-7B-Instruct
+fastapi based lightweight latency comparison backend between <ul>huggingface models <li>gemma-2-9b-it</li>, <li>Meta-Llama-3-8B-Instruct</li>, <li>Qwen2.5-7B-Instruct</li></ul>
