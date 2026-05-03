@@ -8,6 +8,7 @@ def test_root_endpoint(client):
     data = response.json()
     assert data["status"] == "healthy"
     assert "llama" in data["models"]
+    assert "mistral" in data["models"]
 
 def test_health_endpoint(client):
     """Test the /health endpoint"""
@@ -16,6 +17,7 @@ def test_health_endpoint(client):
     data = response.json()
     assert data["status"] == "healthy"
     assert "llama" in data["models"]
+    assert "mistral" in data["models"]
 
 def test_generate_endpoint_unauthorized(client):
     """Test /generate with invalid API key"""

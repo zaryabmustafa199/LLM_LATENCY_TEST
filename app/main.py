@@ -5,6 +5,7 @@ from fastapi.security import APIKeyHeader
 from app.models.llama import LlamaHandler
 from app.models.qwen import QwenHandler
 from app.models.gemma import GemmaHandler
+from app.models.mistral import MistralHandler
 from app.schemas import GenerationRequest, GenerationResponse, HealthResponse
 from app.utils.timing import Timer
 from app.config import settings
@@ -40,13 +41,14 @@ async def add_process_time_header(request: Request, call_next):
 llama_handler = LlamaHandler()
 qwen_handler = QwenHandler()
 gemma_handler = GemmaHandler()
+mistral_handler = MistralHandler()
 
 @app.get("/", tags=["Status"])
 async def root():
     return {
         "service": "FastAPI LLM Benchmark",
         "status": "healthy",
-        "models": ["llama", "qwen", "gemma"]
+        "models": ["llama", "qwen", "gemma", "mistral"]
     }
 
 @app.get("/health", response_model=HealthResponse, tags=["Status"])
@@ -56,7 +58,8 @@ async def health_check():
         "models": {
             "llama": "ready",
             "qwen": "ready",
-            "gemma": "ready"
+            "gemma": "ready",
+            "mistral": "ready"
         }
     }
 
@@ -81,10 +84,13 @@ async def generate_text(request: GenerationRequest, api_key: str = Depends(get_a
         elif "gemma" in model_name:
             response_text = await gemma_handler.generate(request.query)
             used_model = "gemma"
+        elif "mistral" in model_name:
+            response_text = await mistral_handler.generate(request.query)
+            used_model = "mistral"
         else:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Unknown model: {request.model}. Available: llama, qwen, gemma"
+                detail=f"Unknown model: {request.model}. Available: llama, qwen, gemma, mistral"
             )
             
         latency = timer.stop()

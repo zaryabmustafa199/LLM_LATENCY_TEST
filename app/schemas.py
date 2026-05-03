@@ -4,7 +4,7 @@ Pydantic schemas for request and response validation
 Defines the API contract for the /generate endpoint.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 class GenerationRequest(BaseModel):
     """Request schema for LLM generation endpoint"""
@@ -19,18 +19,19 @@ class GenerationRequest(BaseModel):
     
     model: str = Field(
         ...,
-        pattern="^(llama|qwen|gemma)$",
-        description="Model name to use for generation (llama, qwen, or gemma)",
-        examples=["qwen"]
+        pattern="^(llama|qwen|gemma|mistral)$",
+        description="Model name to use for generation (llama, qwen, gemma, or mistral)",
+        examples=["mistral"]
     )
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "query": "Explain quantum computing in simple terms",
                 "model": "qwen"
             }
         }
+    )
 
 
 
@@ -53,14 +54,15 @@ class GenerationResponse(BaseModel):
         ge=0.0
     )
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "model_used": "qwen",
                 "response": "Quantum computing is a type of computing that uses quantum bits...",
                 "latency_ms": 1247.83
             }
         }
+    )
 
 class HealthResponse(BaseModel):
     """Response schema for health check"""

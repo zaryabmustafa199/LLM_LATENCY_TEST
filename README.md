@@ -1,8 +1,11 @@
-# FastAPI LLM Benchmark (Learning Project)
+# FastAPI LLM Latency Benchmark
 
-Welcome to the **FastAPI LLM Benchmark** project! If you are a beginner looking to understand how modern backend APIs communicate with AI models, you are in the right place. 
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+![HuggingFace](https://img.shields.io/badge/HuggingFace-FFD21E?style=for-the-badge&logo=huggingface&logoColor=000)
 
-This project was built to solve a specific problem: **How do we measure the speed (latency) of different Large Language Models (LLMs) in real-time without needing expensive hardware?**
+A high-performance, asynchronous microservice built to benchmark and route requests to various Large Language Models (LLMs) via the Hugging Face Serverless Inference API. This project demonstrates modern API development, dependency injection, secure authentication, and robust error handling.
 
 ---
 
@@ -16,14 +19,18 @@ Instead of running heavy models on our own computer, we use the **Hugging Face I
 1. **Llama 3 (8B Instruct)** - By Meta
 2. **Qwen 2.5 (7B Instruct)** - By Alibaba Cloud
 3. **Gemma 2 (9B Instruct)** - By Google
+4. **Mistral (7B Instruct)** - By Mistral AI
 
 ---
 
-## 🧠 Why Was This Built? (The Evolution)
+## 🧠 Architecture & Design Patterns
 
-Initially, this project attempted to aggregate models using external routing services (like OpenRouter). However, a key lesson was learned: **external APIs can add unpredictable latency**. 
+This application was engineered to minimize overhead and maximize throughput when interacting with external LLM providers.
 
-To get the most accurate speed tests and immediate access to new models the day they are released, the architecture was pivoted to integrate *directly* with Hugging Face's infrastructure. This provides a clean, robust, and zero-local-footprint solution.
+- **Asynchronous I/O:** Utilizes `asyncio` and `httpx` to ensure the server remains non-blocking during remote LLM inference.
+- **Dependency Injection:** Secures endpoints using FastAPI's `Security` dependencies for robust API Key validation.
+- **Modular Handlers:** Employs a factory-style pattern where each LLM has a dedicated, isolated handler class, making the system highly extensible.
+- **Middleware Timing:** Implements global HTTP middleware to accurately measure and inject `X-Process-Time` headers into every response.
 
 ---
 
@@ -42,11 +49,14 @@ graph TD
     E -->|5. Stop Timer| B
     B -->|6. Return JSON + X-Process-Time Header| A
 ```
-
-### Key Technical Concepts Used:
-1. **Asynchronous Programming**: We use `async` and `await` so our server doesn't freeze while waiting for Hugging Face to reply. It can handle other requests in the meantime!
-2. **Dependency Injection**: We secure our API by forcing requests to include a specific Header (`x-api-key`). FastAPI handles checking this automatically before our code even runs.
-3. **Middleware**: We intercept every request as it comes in and as it leaves to log the exact processing time, adding it as an HTTP header (`X-Process-Time`).
+### Request Flow:
+1. Client POSTs to `/generate` with `x-api-key`.
+2. **Middleware** starts the latency timer.
+3. **Security Dependency** validates the API key.
+4. Payload is validated against **Pydantic Schemas**.
+5. Request is routed to the specific LLM Handler (`LlamaHandler`, `MistralHandler`, etc.).
+6. Asynchronous HTTP request is made to the Hugging Face Inference API.
+7. **Middleware** stops the timer and attaches the latency header to the JSON response.
 
 ---
 
@@ -93,19 +103,21 @@ Run the script in a new terminal window:
 ```bash
 python compare.py
 ```
-You will see a beautiful terminal table showing exactly which model is the fastest right now!
+This utility provides a formatted terminal summary, identifying current model latency leaders.
 
 ---
 
-## 🧪 Automated Testing
+## 🧪 Automated Testing Suite
 
-Professional developers write tests to ensure their code works. We use `pytest`.
+This project maintains high reliability through a comprehensive `pytest` suite.
 
-To run the tests:
+To execute the test suite:
 ```bash
-pytest
+python -m pytest -v
 ```
-Our tests do three things:
-1. Ensure the API rejects unauthorized users.
-2. Verify endpoints return the correct data formats.
-3. **Mocking**: We "fake" the Hugging Face API during tests so we don't accidentally consume our usage limits while testing!
+
+**Testing Features:**
+- **Endpoint Coverage:** Verifies all routes (`/`, `/health`, `/generate`).
+- **Security Validation:** Ensures `401 Unauthorized` is returned for invalid or missing API keys.
+- **Input Validation:** Verifies `422 Unprocessable Entity` for unsupported model requests.
+- **API Mocking:** Utilizes `unittest.mock.AsyncMock` to simulate Hugging Face API responses, ensuring the test suite runs instantly without consuming network bandwidth or API rate limits.

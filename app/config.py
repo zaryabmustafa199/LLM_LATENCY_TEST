@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 class Settings(BaseSettings):
@@ -28,12 +28,15 @@ class Settings(BaseSettings):
         default="google/gemma-2-9b-it",
         description="HuggingFace model ID for Gemma 2"
     )
+    mistral_model_id: str = Field(
+        default="mistralai/Mistral-7B-Instruct-v0.3",
+        description="HuggingFace model ID for Mistral 7B Instruct"
+    )
     
     # Generation Parameters
     max_new_tokens: int = Field(default=512, ge=1, le=4096)
     temperature: float = Field(default=0.7, ge=0.0, le=2.0)
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()
