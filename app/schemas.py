@@ -24,20 +24,14 @@ class GenerationRequest(BaseModel):
         examples=["qwen"]
     )
     
-    api_key: str = Field(
-        ...,
-        min_length=16,
-        description="API key for authentication"
-    )
-    
     class Config:
         json_schema_extra = {
             "example": {
                 "query": "Explain quantum computing in simple terms",
-                "model": "qwen",
-                "api_key": "your_secure_api_key_here"
+                "model": "qwen"
             }
         }
+
 
 
 class GenerationResponse(BaseModel):

@@ -1,13 +1,40 @@
-from fastapi import FastAPI, HTTPException, Depends
+import time
+import logging
+from fastapi import FastAPI, HTTPException, Depends, Security, Request
+from fastapi.security import APIKeyHeader
 from app.models.llama import LlamaHandler
 from app.models.qwen import QwenHandler
 from app.models.gemma import GemmaHandler
 from app.schemas import GenerationRequest, GenerationResponse, HealthResponse
 from app.utils.timing import Timer
-import time
-from typing import Dict
+from app.config import settings
 
-app = FastAPI(title="LLM Microservice", version="1.0.0")
+# Setup Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="FastAPI LLM Benchmark", version="2.0.0")
+
+# Security Dependency
+API_KEY_NAME = "x-api-key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=True)
+
+async def get_api_key(api_key: str = Security(api_key_header)):
+    if api_key != settings.api_key:
+        logger.warning("Failed authentication attempt.")
+        raise HTTPException(status_code=401, detail="Invalid or missing API Key")
+    return api_key
+
+# Global Timing Middleware
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    # Add custom header for total request time
+    response.headers["X-Process-Time"] = str(process_time)
+    logger.info(f"Request: {request.method} {request.url.path} - Completed in {process_time:.4f}s")
+    return response
 
 # Initialize handlers
 llama_handler = LlamaHandler()
@@ -17,7 +44,7 @@ gemma_handler = GemmaHandler()
 @app.get("/", tags=["Status"])
 async def root():
     return {
-        "service": "LLM Microservice",
+        "service": "FastAPI LLM Benchmark",
         "status": "healthy",
         "models": ["llama", "qwen", "gemma"]
     }
@@ -34,12 +61,11 @@ async def health_check():
     }
 
 @app.post("/generate", response_model=GenerationResponse, tags=["Inference"])
-async def generate_text(request: GenerationRequest):
-    # Validate API Key (Simple check)
-    from app.config import settings
-    if request.api_key != settings.api_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    
+async def generate_text(request: GenerationRequest, api_key: str = Depends(get_api_key)):
+    """
+    Generates text using the specified LLM. 
+    Secured via Dependency Injection (x-api-key header).
+    """
     timer = Timer()
     timer.start()
     
@@ -70,4 +96,5 @@ async def generate_text(request: GenerationRequest):
         }
         
     except Exception as e:
+        logger.error(f"Inference error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

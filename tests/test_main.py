@@ -21,19 +21,24 @@ def test_generate_endpoint_unauthorized(client):
     """Test /generate with invalid API key"""
     payload = {
         "model": "llama",
-        "query": "test",
-        "api_key": "wrong_but_long_key_123456"
+        "query": "test"
     }
-    response = client.post("/generate", json=payload)
+    headers = {
+        "x-api-key": "wrong_but_long_key_123456"
+    }
+    response = client.post("/generate", json=payload, headers=headers)
     assert response.status_code == 401
-    assert "Invalid API key" in response.json()["detail"]
+    assert "Invalid or missing API Key" in response.json()["detail"]
 
 def test_generate_endpoint_validation_error(client):
     """Test /generate with invalid model (should trigger 422)"""
     payload = {
         "model": "unknown-model",
-        "query": "test",
-        "api_key": "test_secure_key_123456789"
+        "query": "test"
     }
-    response = client.post("/generate", json=payload)
+    headers = {
+        "x-api-key": "test_secure_key_123456789"
+    }
+    response = client.post("/generate", json=payload, headers=headers)
     assert response.status_code == 422
+
